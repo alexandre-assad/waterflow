@@ -3,3 +3,8 @@ https://fr.wikipedia.org/wiki/MLOps
 https://www.redhat.com/fr/topics/ai/what-is-mlops
 https://aws.amazon.com/what-is/mlops/
 https://littlebigcode.fr/why-mlops-important-to-understand/
+https://blent.ai/blog/a/mlflow-tout-savoir-sur-loutil-indispensable-du-mlops
+https://ubuntu.com/blog/what-is-mlflow#:~:text=MLflow%20is%20an%20open%20source,million%20users%20in%20November%202022.
+https://mlflow.org/docs/latest/ml/
+https://mlflow.org/docs/2.5.0/what-is-mlflow.html
+https://medium.com/@ab.vancouver.canada/a-comprehensive-guide-to-mlflow-what-it-is-its-pros-and-cons-and-how-to-use-it-in-your-python-468af13468c6

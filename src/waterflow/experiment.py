@@ -56,7 +56,7 @@ def preprocess_data() -> tuple[ndarray, Any, ndarray, Any]:
     scaler = StandardScaler()
     dataframe_train_standard = scaler.fit_transform(dataframe_train, target_train)
     dataframe_test_standard = scaler.fit_transform(dataframe_test, target_train)
-    mlflow.sklearn.log_model(scaler, "Scaler")
+    mlflow.sklearn.log_model(scaler, "Scaler", registered_model_name='Waterflow Scaler')
     return dataframe_train_standard, target_train, dataframe_test_standard, target_test
 
 def create_model(dataframe_train, target_train, dataframe_test, target_test):
@@ -78,7 +78,7 @@ def create_model_tuned(dataframe_train, target_train, dataframe_test, target_tes
     mlflow.log_param("max_depth", 12)
     mlflow.log_param("n_estimators", 400)
     mlflow.log_metric("f1_score", f1)
-    mlflow.sklearn.log_model(xgboost, "XGboost Tuned")
+    mlflow.sklearn.log_model(xgboost, "XGboost Tuned", registered_model_name='Waterflow XGBoost')
 
 def main() -> None: 
     mlflow.set_tracking_uri('http://localhost:5000') 
@@ -91,4 +91,5 @@ def main() -> None:
         create_model_tuned(dataframe_train, target_train, dataframe_test, target_test)
     mlflow.end_run()
 
-main()
+if __name__ == '__main__':
+    main()

@@ -1,15 +1,25 @@
 name: Waterflow CI
 on: [push]		
 jobs:
-  waterflow:
+  tests:
     runs-on: ubuntu-latest
     steps:
-      - run: echo " The job was automatically triggered by a ${{Github.event_name }} event."
-      - run: echo " This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo " The name of your branch is ${{ GitHub.ref }} and your repository is ${{ GitHub.repository }}."
       - uses: actions/checkout@v3
-      - run: echo " The ${{ GitHub.repository }} repository has been cloned to the runner." 
-      - run: echo " The workflow is now ready to test your code on the runner."
-      - run: |
-          ls ${{ GitHub.workspace }}
-      - run: echo " This job's status is ${{ job.status }}."
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+      - name: Start MLflow server
+        run: |
+          uv run mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000 &
+          sleep 5
+      - name: Run registry models
+        run: uv run python registry_models.py
+      - name: Run tests
+        env:
+          MLFLOW_TRACKING_URI: http://127.0.0.1:5000
+        run: uv run pytest 

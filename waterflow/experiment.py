@@ -46,7 +46,7 @@ def drop_outliers(
         )
     return dataframe
 
-def preprocess_data() -> tuple[ndarray, Any, ndarray, Any]:
+def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
     dataframe = read_csv('./data/water_potability.csv')
     dataframe_fill_na = dataframe.dropna()
     dataframe_sized = drop_outliers(dataframe_fill_na, dataframe.columns)
@@ -56,29 +56,32 @@ def preprocess_data() -> tuple[ndarray, Any, ndarray, Any]:
     scaler = StandardScaler()
     dataframe_train_standard = scaler.fit_transform(dataframe_train, target_train)
     dataframe_test_standard = scaler.fit_transform(dataframe_test, target_train)
-    mlflow.sklearn.log_model(scaler, "Scaler", registered_model_name='Waterflow Scaler')
+    if registry:
+        mlflow.sklearn.log_model(scaler, "Scaler", registered_model_name='Waterflow Scaler')
     return dataframe_train_standard, target_train, dataframe_test_standard, target_test
 
-def create_model(dataframe_train, target_train, dataframe_test, target_test):
+def create_model(dataframe_train, target_train, dataframe_test, target_test, registry:bool = True):
     xgboost = XGBClassifier()
     xgboost.fit(dataframe_train, target_train)
     predictions = xgboost.predict(dataframe_test)
     f1 = f1_score(target_test, predictions)
-    mlflow.log_metric("f1_score", f1)
-    mlflow.sklearn.log_model(xgboost, "XGboost")
+    if registry:
+        mlflow.log_metric("f1_score", f1)
+        mlflow.sklearn.log_model(xgboost, "XGboost")
 
-def create_model_tuned(dataframe_train, target_train, dataframe_test, target_test):
+def create_model_tuned(dataframe_train, target_train, dataframe_test, target_test, registry: bool = True):
     xgboost = XGBClassifier(objective= 'binary:logistic', nthread=4, learning_rate=0.3, max_depth=12, n_estimators=400)
     xgboost.fit(dataframe_train, target_train)
     predictions = xgboost.predict(dataframe_test)
     f1 = f1_score(target_test, predictions)
-    mlflow.log_param("objective", 'binary:logistic')
-    mlflow.log_param("nthread", 4)
-    mlflow.log_param("learning_rate", 0.3)
-    mlflow.log_param("max_depth", 12)
-    mlflow.log_param("n_estimators", 400)
-    mlflow.log_metric("f1_score", f1)
-    mlflow.sklearn.log_model(xgboost, "XGboost Tuned", registered_model_name='Waterflow XGBoost')
+    if registry:
+        mlflow.log_param("objective", 'binary:logistic')
+        mlflow.log_param("nthread", 4)
+        mlflow.log_param("learning_rate", 0.3)
+        mlflow.log_param("max_depth", 12)
+        mlflow.log_param("n_estimators", 400)
+        mlflow.log_metric("f1_score", f1)
+        mlflow.sklearn.log_model(xgboost, "XGboost Tuned", registered_model_name='Waterflow XGBoost')
 
 def main() -> None: 
     mlflow.set_tracking_uri('http://localhost:5000') 

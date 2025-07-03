@@ -1,5 +1,5 @@
 import numpy as np
-from src.waterflow.app import FEATURES, model
+from waterflow.app import FEATURES, model
 
 def test_model_is_loaded():
     assert hasattr(model, 'predict')

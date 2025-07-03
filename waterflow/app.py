@@ -7,12 +7,11 @@ from pandas import DataFrame
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
-mlflow.set_tracking_uri('http://localhost:5000') 
-app = Flask(__name__)    
+mlflow.set_tracking_uri("http://localhost:5000")
+app = Flask(__name__)
 
 model = mlflow.sklearn.load_model("models:/Waterflow XGBoost/latest")
 scaler = mlflow.sklearn.load_model("models:/Waterflow Scaler/latest")
-
 
 
 HTML_TEMPLATE = """
@@ -39,22 +38,38 @@ HTML_TEMPLATE = """
 </html>
 """
 
-FEATURES = ["ph", "Hardness", "Solids", "Chloramines", "Sulfate", "Conductivity", "Organic_carbon", "Trihalomethanes", "Turbidity"]
+FEATURES = [
+    "ph",
+    "Hardness",
+    "Solids",
+    "Chloramines",
+    "Sulfate",
+    "Conductivity",
+    "Organic_carbon",
+    "Trihalomethanes",
+    "Turbidity",
+]
 
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route("/", methods=["GET", "POST"])
 def predict():
     if not isinstance(model, XGBClassifier) or not isinstance(scaler, StandardScaler):
         return None
     prediction = None
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
-            input_values = DataFrame({feature: [float(request.form[feature])] for feature in FEATURES})
+            input_values = DataFrame(
+                {feature: [float(request.form[feature])] for feature in FEATURES}
+            )
             input_array = scaler.transform(input_values)
             prediction = model.predict(input_array)[0]
         except Exception as e:
             prediction = f"Erreur lors de la prédiction : {e}"
 
-    return render_template_string(HTML_TEMPLATE, features=FEATURES, prediction=prediction)
+    return render_template_string(
+        HTML_TEMPLATE, features=FEATURES, prediction=prediction
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(debug=True, port=8000)

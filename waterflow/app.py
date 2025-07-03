@@ -8,7 +8,12 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 mlflow.set_tracking_uri('http://localhost:5000') 
-app = Flask(__name__)
+app = Flask(__name__)    
+
+model = mlflow.sklearn.load_model("models:/Waterflow XGBoost/latest")
+scaler = mlflow.sklearn.load_model("models:/Waterflow Scaler/latest")
+
+
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -38,8 +43,6 @@ FEATURES = ["ph", "Hardness", "Solids", "Chloramines", "Sulfate", "Conductivity"
 
 @app.route('/', methods=['GET', 'POST'])
 def predict():
-    model = mlflow.sklearn.load_model("models:/Waterflow XGBoost/latest")
-    scaler = mlflow.sklearn.load_model("models:/Waterflow Scaler/latest")
     if not isinstance(model, XGBClassifier) or not isinstance(scaler, StandardScaler):
         return None
     prediction = None

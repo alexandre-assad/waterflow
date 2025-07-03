@@ -18,7 +18,7 @@ jobs:
           uv run mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000 &
           sleep 5
       - name: Run registry models
-        run: uv run python ops/registry_models.py
+        run: uv run python waterflow/ops/registry_models.py
       - name: Run tests
         env:
           MLFLOW_TRACKING_URI: http://127.0.0.1:5000

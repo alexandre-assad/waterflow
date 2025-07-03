@@ -13,8 +13,6 @@ jobs:
         run: uv python install 3.12
       - name: Install the project
         run: uv sync --locked --all-extras --dev
-      - name: Run MLFlow ui
-        run: uv run mlflow ui &
       - name: Run tests
         run: uv run pytest 
       

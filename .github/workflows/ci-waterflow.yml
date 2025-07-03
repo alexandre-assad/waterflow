@@ -14,7 +14,7 @@ jobs:
       - name: Install the project
         run: uv sync --locked --all-extras --dev
       - name: Run MLFlow ui
-        run: uv run mlflow ui
+        run: uv run mlflow ui &
       - name: Run tests
         run: uv run pytest 
       

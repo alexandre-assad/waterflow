@@ -1,8 +1,8 @@
-import mlflow.sklearn
-import pickle
+import mlflow
 import numpy as np
 
 from flask import Flask, render_template_string, request
+from mlflow.sklearn import load_model
 from pandas import DataFrame
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
@@ -10,9 +10,8 @@ from xgboost import XGBClassifier
 mlflow.set_tracking_uri("http://localhost:5000")
 app = Flask(__name__)
 
-model = mlflow.sklearn.load_model("models:/Waterflow XGBoost/latest")
-scaler = mlflow.sklearn.load_model("models:/Waterflow Scaler/latest")
-
+model = load_model("models:/Waterflow XGBoost/latest")
+scaler = load_model("models:/Waterflow Scaler/latest")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>

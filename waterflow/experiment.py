@@ -11,6 +11,30 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from xgboost import XGBClassifier
 
+import mlflow
+
+def to_register_model(model_name: str, score: float | None = None) -> bool:
+    client = mlflow.tracking.MlflowClient()
+    try:
+        versions = client.get_latest_versions(name=model_name)
+        if not versions:
+            return True
+        best_f1 = -1.0
+        for version in versions:
+            run_id = version._run_id
+            if not run_id:
+                continue
+            run = client.get_run(run_id)
+            metrics = run.data.metrics
+            f1 = metrics.get("f1_score", -1)
+            if f1 > best_f1:
+                best_f1 = f1
+        if score is None:
+            return False
+        return score > best_f1
+    except Exception:
+        return True
+
 
 def balance_dataframe(dataframe: DataFrame) -> DataFrame:
     potable_class = dataframe[dataframe["Potability"] == 1]
@@ -49,6 +73,7 @@ def drop_outliers(
 
 
 def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
+    # client = mlflow.tracking.MlflowClient()
     dataframe = read_csv("./data/water_potability.csv")
     dataframe_fill_na = dataframe.dropna()
     dataframe_sized = drop_outliers(dataframe_fill_na, dataframe.columns)
@@ -64,9 +89,18 @@ def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
     dataframe_train_standard = scaler.fit_transform(dataframe_train, target_train)
     dataframe_test_standard = scaler.fit_transform(dataframe_test, target_train)
     if registry:
-        mlflow.sklearn.log_model(
-            scaler, "Scaler", registered_model_name="Waterflow Scaler"
-        )
+        if to_register_model("Waterflow Scaler"):
+            mlflow.sklearn.log_model(
+                scaler, "Scaler", registered_model_name="Waterflow Scaler"
+            )
+            # client.transition_model_version_stage(
+            #     name="Waterflow Scaler",
+            #     version='latest',
+            #     stage="Staging",
+            #     archive_existing_versions=False
+            # )
+        else:
+            mlflow.sklearn.log_model(scaler, "Scaler")
     return dataframe_train_standard, target_train, dataframe_test_standard, target_test
 
 
@@ -85,6 +119,7 @@ def create_model(
 def create_model_tuned(
     dataframe_train, target_train, dataframe_test, target_test, registry: bool = True
 ):
+    client = mlflow.tracking.MlflowClient()
     xgboost = XGBClassifier(
         objective="binary:logistic",
         nthread=4,
@@ -102,9 +137,18 @@ def create_model_tuned(
         mlflow.log_param("max_depth", 12)
         mlflow.log_param("n_estimators", 400)
         mlflow.log_metric("f1_score", f1)
-        mlflow.sklearn.log_model(
-            xgboost, "XGboost Tuned", registered_model_name="Waterflow XGBoost"
-        )
+        if to_register_model("Waterflow XGBoost", f1):
+            mlflow.sklearn.log_model(
+                xgboost, "XGboost Tuned", registered_model_name="Waterflow XGBoost"
+            )
+            # client.transition_model_version_stage(
+            #     name="Waterflow XGBoost",
+            #     version='latest',
+            #     stage="Staging",
+            #     archive_existing_versions=False
+            # )
+        else:
+            mlflow.sklearn.log_model(xgboost, "XGboost Tuned")
 
 
 def main() -> None:

@@ -10,8 +10,8 @@ from xgboost import XGBClassifier
 mlflow.set_tracking_uri("http://localhost:5000")
 app = Flask(__name__)
 
-model = load_model("models:/Waterflow XGBoost/latest")
-scaler = load_model("models:/Waterflow Scaler/latest")
+model = load_model("models:/Waterflow XGBoost@Production")
+scaler = load_model("models:/Waterflow Scaler@Production")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>

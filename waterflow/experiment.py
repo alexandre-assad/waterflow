@@ -131,15 +131,19 @@ def create_model_tuned(
         'min_child_weight': [1, 2, 3],
     }
 
-    xgboost = RandomizedSearchCV(estimator = XGBClassifier(), 
+    rgs = RandomizedSearchCV(estimator = XGBClassifier(), 
     param_distributions= param_test, n_iter=100, scoring='f1',n_jobs=1, cv=3)
+    rgs.fit(dataframe_train, target_train)
+    
+    xgboost = XGBClassifier(n_estimators=rgs.best_params_['n_estimators'],max_depth=rgs.best_params_['max_depth'],learning_rate=rgs.best_params_['learning_rate'],min_child_weight=rgs.best_params_['min_child_weight'])
     xgboost.fit(dataframe_train, target_train)
     predictions = xgboost.predict(dataframe_test)
     f1 = f1_score(target_test, predictions)
+
     if registry:
         mlflow.log_param("objective", "binary:logistic")
         mlflow.log_param("nthread", 4)
-        for key, value in xgboost.best_params_.items():
+        for key, value in xgboost.get_params().items():
             mlflow.log_param(key, value)
         mlflow.log_metric("f1_score", f1)
         if to_register_model("Waterflow XGBoost", f1):

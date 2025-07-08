@@ -5,23 +5,32 @@ from mlflow.entities.model_registry.model_version import ModelVersion
 client = MlflowClient()
 MODELS_NAME = ['Waterflow XGBoost', 'Waterflow Scaler']
 
-def get_staging_models(model_name: str) -> Model:
-    return client.get_model_version_by_alias(name=model_name, alias="staging")
+def get_staging_model(model_name: str) -> ModelVersion:
+    return client.get_model_version_by_alias(name=model_name, alias="Staging")
 
-def select_staging_model(models):
-    ...
+def set_in_production(model_name: str, model: ModelVersion) -> None:
+    try:
+        production_model = client.get_model_version_by_alias(name=model_name, alias="Production")
+    except:
+        production_model = None 
+    if production_model:
+        client.set_registered_model_alias(production_model.name, 'Archived', production_model.version)
+        client.delete_registered_model_alias(production_model.name, 'Production')
 
-def set_in_production(model) -> None:
-    ...
+    client.set_registered_model_alias(model.name, 'Production', model.version)
+    client.delete_registered_model_alias(model.name, 'Staging')
 
 def main():
     for model_name in MODELS_NAME:
-        staging_models = get_staging_models(model_name)
-        if not staging_models:
+        try:
+            staging_model = get_staging_model(model_name)
+        except:
+            continue
+        if not staging_model:
             continue
 
-        model = select_staging_model(staging_models)
-        set_in_production(model)
+        set_in_production(model_name, staging_model)
+        # remove_all_staging(model_name)
 
 if __name__ == '__main__':
     main()

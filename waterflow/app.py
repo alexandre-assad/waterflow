@@ -10,32 +10,14 @@ from xgboost import XGBClassifier
 mlflow.set_tracking_uri("http://localhost:5000")
 app = Flask(__name__)
 
-model = load_model("models:/Waterflow XGBoost@Production")
-scaler = load_model("models:/Waterflow Scaler@Production")
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Prédiction Potabilité de l'Eau</title>
-</head>
-<body>
-    <h1>Prédire la potabilité de l'eau</h1>
-    <form method="post">
-        {% for feature in features %}
-            <label>{{ feature }}:</label>
-            <input type="number" step="any" name="{{ feature }}" required><br><br>
-        {% endfor %}
-        <button type="submit">Prédire</button>
-    </form>
-
-    {% if prediction is not none %}
-        <h2>Résultat de la prédiction : {{ 'Potable' if prediction == 1 else 'Non potable' }}</h2>
-    {% endif %}
-</body>
-</html>
-"""
+try:
+    model = load_model("models:/Waterflow XGBoost@Production") 
+except: 
+    model = load_model("models:/Waterflow XGBoost/latest")
+try:
+    scaler = load_model("models:/Waterflow Scaler@Production")
+except: 
+    scaler = load_model("models:/Waterflow Scaler/latest")
 
 FEATURES = [
     "ph",
@@ -49,6 +31,57 @@ FEATURES = [
     "Turbidity",
 ]
 
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Prédiction Potabilité de l'Eau</title>
+    <script>
+        function randomFloat(min, max) {
+            return (Math.random() * (max - min) + min).toFixed(2);
+        }
+
+        function fillRandomValues() {
+            const ranges = {
+                "ph": [0, 14],
+                "Hardness": [50, 300],
+                "Solids": [1000, 50000],
+                "Chloramines": [0, 15],
+                "Sulfate": [50, 400],
+                "Conductivity": [100, 1000],
+                "Organic_carbon": [0, 30],
+                "Trihalomethanes": [0, 150],
+                "Turbidity": [0, 10]
+            };
+
+            for (const feature in ranges) {
+                const input = document.querySelector(`[name="${feature}"]`);
+                if (input) {
+                    const [min, max] = ranges[feature];
+                    input.value = randomFloat(min, max);
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Prédire la potabilité de l'eau</h1>
+    <form method="post">
+        {% for feature in features %}
+            <label>{{ feature }}:</label>
+            <input type="number" step="any" name="{{ feature }}" required><br><br>
+        {% endfor %}
+        <button type="submit">Prédire</button>
+        <button type="button" onclick="fillRandomValues()">Remplir avec des valeurs aléatoires</button>
+    </form>
+
+    {% if prediction is not none %}
+        <h2>Résultat de la prédiction : {{ 'Potable' if prediction == 1 else 'Non potable' }}</h2>
+    {% endif %}
+</body>
+</html>
+"""
 
 @app.route("/", methods=["GET", "POST"])
 def predict():
@@ -68,7 +101,6 @@ def predict():
     return render_template_string(
         HTML_TEMPLATE, features=FEATURES, prediction=prediction
     )
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)

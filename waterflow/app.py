@@ -11,12 +11,12 @@ mlflow.set_tracking_uri("http://localhost:5000")
 app = Flask(__name__)
 
 try:
-    model = load_model("models:/Waterflow XGBoost@Production") 
-except: 
+    model = load_model("models:/Waterflow XGBoost@Production")
+except:
     model = load_model("models:/Waterflow XGBoost/latest")
 try:
     scaler = load_model("models:/Waterflow Scaler@Production")
-except: 
+except:
     scaler = load_model("models:/Waterflow Scaler/latest")
 
 FEATURES = [
@@ -83,6 +83,7 @@ HTML_TEMPLATE = """
 </html>
 """
 
+
 @app.route("/", methods=["GET", "POST"])
 def predict():
     if not isinstance(model, XGBClassifier) or not isinstance(scaler, StandardScaler):
@@ -101,6 +102,7 @@ def predict():
     return render_template_string(
         HTML_TEMPLATE, features=FEATURES, prediction=prediction
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)

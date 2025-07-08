@@ -11,9 +11,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from xgboost import XGBClassifier
 
+
 def get_model_version(model_name: str) -> str:
     client = mlflow.tracking.MlflowClient()
-    versions = client.get_latest_versions(model_name, stages=['None'])
+    versions = client.get_latest_versions(model_name, stages=["None"])
     for v in versions:
         return v.version
 
@@ -100,7 +101,7 @@ def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
             )
             client.set_registered_model_alias(
                 name="Waterflow Scaler",
-                version=get_model_version('Waterflow Scaler'),
+                version=get_model_version("Waterflow Scaler"),
                 alias="Staging",
             )
         else:
@@ -125,17 +126,28 @@ def create_model_tuned(
 ):
     client = mlflow.tracking.MlflowClient()
     param_test = {
-        'n_estimators' : [100, 200, 300, 400, 500],
-        'max_depth': range(4, 15, 3),
-        'learning_rate': [0.005, 0.1, 0.2, 0.3, 0.4, 0.5],
-        'min_child_weight': [1, 2, 3],
+        "n_estimators": [100, 200, 300, 400, 500],
+        "max_depth": range(4, 15, 3),
+        "learning_rate": [0.005, 0.1, 0.2, 0.3, 0.4, 0.5],
+        "min_child_weight": [1, 2, 3],
     }
 
-    rgs = RandomizedSearchCV(estimator = XGBClassifier(), 
-    param_distributions= param_test, n_iter=100, scoring='f1',n_jobs=1, cv=3)
+    rgs = RandomizedSearchCV(
+        estimator=XGBClassifier(),
+        param_distributions=param_test,
+        n_iter=100,
+        scoring="f1",
+        n_jobs=1,
+        cv=3,
+    )
     rgs.fit(dataframe_train, target_train)
-    
-    xgboost = XGBClassifier(n_estimators=rgs.best_params_['n_estimators'],max_depth=rgs.best_params_['max_depth'],learning_rate=rgs.best_params_['learning_rate'],min_child_weight=rgs.best_params_['min_child_weight'])
+
+    xgboost = XGBClassifier(
+        n_estimators=rgs.best_params_["n_estimators"],
+        max_depth=rgs.best_params_["max_depth"],
+        learning_rate=rgs.best_params_["learning_rate"],
+        min_child_weight=rgs.best_params_["min_child_weight"],
+    )
     xgboost.fit(dataframe_train, target_train)
     predictions = xgboost.predict(dataframe_test)
     f1 = f1_score(target_test, predictions)
@@ -152,7 +164,7 @@ def create_model_tuned(
             )
             client.set_registered_model_alias(
                 name="Waterflow XGBoost",
-                version=get_model_version('Waterflow XGBoost'),
+                version=get_model_version("Waterflow XGBoost"),
                 alias="Staging",
             )
         else:

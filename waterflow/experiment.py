@@ -6,12 +6,18 @@ from numpy import percentile, ndarray
 from pandas import read_csv, DataFrame, concat
 
 from sklearn.metrics import f1_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 from xgboost import XGBClassifier
 
-import mlflow
+
+def get_model_version(model_name: str) -> str:
+    client = mlflow.tracking.MlflowClient()
+    versions = client.get_latest_versions(model_name, stages=["None"])
+    for v in versions:
+        return v.version
+
 
 def to_register_model(model_name: str, score: float | None = None) -> bool:
     client = mlflow.tracking.MlflowClient()
@@ -73,7 +79,7 @@ def drop_outliers(
 
 
 def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
-    # client = mlflow.tracking.MlflowClient()
+    client = mlflow.tracking.MlflowClient()
     dataframe = read_csv("./data/water_potability.csv")
     dataframe_fill_na = dataframe.dropna()
     dataframe_sized = drop_outliers(dataframe_fill_na, dataframe.columns)
@@ -93,12 +99,11 @@ def preprocess_data(registry: bool = True) -> tuple[ndarray, Any, ndarray, Any]:
             mlflow.sklearn.log_model(
                 scaler, "Scaler", registered_model_name="Waterflow Scaler"
             )
-            # client.transition_model_version_stage(
-            #     name="Waterflow Scaler",
-            #     version='latest',
-            #     stage="Staging",
-            #     archive_existing_versions=False
-            # )
+            client.set_registered_model_alias(
+                name="Waterflow Scaler",
+                version=get_model_version("Waterflow Scaler"),
+                alias="Staging",
+            )
         else:
             mlflow.sklearn.log_model(scaler, "Scaler")
     return dataframe_train_standard, target_train, dataframe_test_standard, target_test
@@ -120,33 +125,48 @@ def create_model_tuned(
     dataframe_train, target_train, dataframe_test, target_test, registry: bool = True
 ):
     client = mlflow.tracking.MlflowClient()
+    param_test = {
+        "n_estimators": [100, 200, 300, 400, 500],
+        "max_depth": range(4, 15, 3),
+        "learning_rate": [0.005, 0.1, 0.2, 0.3, 0.4, 0.5],
+        "min_child_weight": [1, 2, 3],
+    }
+
+    rgs = RandomizedSearchCV(
+        estimator=XGBClassifier(),
+        param_distributions=param_test,
+        n_iter=100,
+        scoring="f1",
+        n_jobs=1,
+        cv=3,
+    )
+    rgs.fit(dataframe_train, target_train)
+
     xgboost = XGBClassifier(
-        objective="binary:logistic",
-        nthread=4,
-        learning_rate=0.3,
-        max_depth=12,
-        n_estimators=400,
+        n_estimators=rgs.best_params_["n_estimators"],
+        max_depth=rgs.best_params_["max_depth"],
+        learning_rate=rgs.best_params_["learning_rate"],
+        min_child_weight=rgs.best_params_["min_child_weight"],
     )
     xgboost.fit(dataframe_train, target_train)
     predictions = xgboost.predict(dataframe_test)
     f1 = f1_score(target_test, predictions)
+
     if registry:
         mlflow.log_param("objective", "binary:logistic")
         mlflow.log_param("nthread", 4)
-        mlflow.log_param("learning_rate", 0.3)
-        mlflow.log_param("max_depth", 12)
-        mlflow.log_param("n_estimators", 400)
+        for key, value in xgboost.get_params().items():
+            mlflow.log_param(key, value)
         mlflow.log_metric("f1_score", f1)
         if to_register_model("Waterflow XGBoost", f1):
             mlflow.sklearn.log_model(
                 xgboost, "XGboost Tuned", registered_model_name="Waterflow XGBoost"
             )
-            # client.transition_model_version_stage(
-            #     name="Waterflow XGBoost",
-            #     version='latest',
-            #     stage="Staging",
-            #     archive_existing_versions=False
-            # )
+            client.set_registered_model_alias(
+                name="Waterflow XGBoost",
+                version=get_model_version("Waterflow XGBoost"),
+                alias="Staging",
+            )
         else:
             mlflow.sklearn.log_model(xgboost, "XGboost Tuned")
 
